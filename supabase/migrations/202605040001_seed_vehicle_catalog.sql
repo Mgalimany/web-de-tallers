@@ -1209,3 +1209,16 @@ INSERT INTO public.vehicle_models (make_id, name, slug, market_regions) VALUES
 ON CONFLICT (make_id, slug) DO NOTHING;
 
 COMMIT;
+-- Tesla (Added manually)
+INSERT INTO public.vehicle_makes (name, slug, market_regions) 
+VALUES ('Tesla', 'tesla', ARRAY['ES']) 
+ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;
+
+INSERT INTO public.vehicle_models (make_id, name, slug, market_regions) VALUES 
+((SELECT id FROM public.vehicle_makes WHERE slug = 'tesla'), 'Model S', 'tesla-model-s', ARRAY['ES']),
+((SELECT id FROM public.vehicle_makes WHERE slug = 'tesla'), 'Model 3', 'tesla-model-3', ARRAY['ES']),
+((SELECT id FROM public.vehicle_makes WHERE slug = 'tesla'), 'Model X', 'tesla-model-x', ARRAY['ES']),
+((SELECT id FROM public.vehicle_makes WHERE slug = 'tesla'), 'Model Y', 'tesla-model-y', ARRAY['ES']),
+((SELECT id FROM public.vehicle_makes WHERE slug = 'tesla'), 'Roadster', 'tesla-roadster', ARRAY['ES']),
+((SELECT id FROM public.vehicle_makes WHERE slug = 'tesla'), 'Cybertruck', 'tesla-cybertruck', ARRAY['ES'])
+ON CONFLICT (make_id, slug) DO NOTHING;
