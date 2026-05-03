@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+.next/
+out/
+
+.venv/
+__pycache__/
+*.pyc
+
+.DS_Store
+dist/
+build/
+coverage/
+tsconfig.tsbuildinfo
