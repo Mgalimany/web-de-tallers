@@ -28,6 +28,7 @@ export type Workshop = {
     priceValue: number;
     wouldReturn: number;
   };
+  images?: string[];
 };
 
 export type SearchFilters = {
@@ -40,6 +41,7 @@ export type SearchFilters = {
   maxHourlyRate: string;
   minScore: string;
   onlyVerified: boolean;
+  onlyDgtLibroTaller: boolean;
 };
 
 export type VehicleDraft = {

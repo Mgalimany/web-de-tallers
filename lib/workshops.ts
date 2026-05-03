@@ -36,6 +36,8 @@ export async function searchWorkshops(filters: SearchFilters): Promise<Workshop[
       ? Number(filters.maxHourlyRate)
       : null,
     p_min_bayesian_score: filters.minScore ? Number(filters.minScore) : null,
+    p_only_verified: filters.onlyVerified,
+    p_only_dgt_libro_taller: filters.onlyDgtLibroTaller,
     p_limit: 5000,
     p_offset: 0
   });
@@ -65,6 +67,130 @@ export async function searchWorkshops(filters: SearchFilters): Promise<Workshop[
     services: [],
     features: []
   }));
+}
+
+export async function getWorkshopBySlug(slug: string): Promise<Workshop | null> {
+  if (!hasSupabaseConfig || !supabase) {
+    return mockWorkshops.find((w) => w.slug === slug) || null;
+  }
+
+  const { data, error } = await supabase
+    .from("workshops")
+    .select(`
+      *,
+      stats:workshop_review_stats(*),
+      images:workshop_images(url),
+      services:workshop_services(
+        category:service_categories(code, name_ca)
+      )
+    `)
+    .eq("slug", slug)
+    .single();
+
+  if (error || !data) {
+    console.error("getWorkshopBySlug failed", error);
+    return null;
+  }
+
+  const stats = data.stats?.[0] || data.stats; // Depending on single/plural join
+  const services = (data.services || []).map((s: any) => s.category?.name_ca).filter(Boolean);
+
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug,
+    description: data.description || "",
+    addressLine: data.address_line || "",
+    municipality: data.municipality || "",
+    province: data.province || "",
+    latitude: data.location.coordinates[1],
+    longitude: data.location.coordinates[0],
+    distanceKm: 0, // Detail page doesn't calculate distance unless we pass userPos
+    hourlyRateEur: data.hourly_rate_eur,
+    verified: data.verified,
+    dgtLibroTaller: data.dgt_libro_taller,
+    reviewCount: stats?.review_count || 0,
+    avgOverallScore: stats?.avg_overall_score || 0,
+    bayesianScore: stats?.bayesian_score || 0,
+    brandMatch: false,
+    services,
+    images: (data.images || []).map((img: any) => img.url),
+    features: [],
+    phone: data.phone,
+    website: data.website,
+    openingHours: data.opening_hours ? Object.values(data.opening_hours as any) : [],
+    scoreBreakdown: stats ? {
+      service: stats.avg_service || 0,
+      treatment: stats.avg_treatment || 0,
+      knowledge: stats.avg_knowledge || 0,
+      priceValue: stats.avg_price_value || 0,
+      wouldReturn: stats.avg_would_return || 0
+    } : undefined
+  };
+}
+
+export async function getWorkshopReviews(workshopId: string) {
+  if (!hasSupabaseConfig || !supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("reviews")
+    .select(`
+      *,
+      user:profiles(full_name, avatar_url),
+      vehicle:user_vehicles(
+        make:vehicle_makes(name),
+        model:vehicle_models(name)
+      )
+    `)
+    .eq("workshop_id", workshopId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getWorkshopReviews failed", error);
+    return [];
+  }
+
+  return data.map((r: any) => ({
+    id: r.id,
+    userName: r.user?.full_name || "Usuari anònim",
+    overallScore: r.overall_score,
+    comment: r.comment,
+    createdAt: r.created_at,
+    vehicleName: r.vehicle ? `${r.vehicle.make?.name} ${r.vehicle.model?.name}` : null,
+    scoreBreakdown: {
+      service: r.score_service,
+      treatment: r.score_treatment,
+      knowledge: r.score_knowledge,
+      priceValue: r.score_price_value,
+      wouldReturn: r.score_would_return
+    }
+  }));
+}
+
+export async function submitReview(workshopId: string, reviewData: any) {
+  if (!hasSupabaseConfig || !supabase) {
+    throw new Error("Supabase is not configured");
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("No authenticated user");
+
+  const { error } = await supabase.from("reviews").insert({
+    workshop_id: workshopId,
+    user_id: userData.user.id,
+    ...reviewData,
+    status: "published" // Auto-publish for MVP
+  });
+
+  if (error) {
+    console.error("submitReview failed", error);
+    throw error;
+  }
+
+  return true;
 }
 
 function filterMockWorkshops(filters: SearchFilters): Workshop[] {

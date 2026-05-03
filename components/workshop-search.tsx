@@ -10,6 +10,7 @@ import {
   LocateFixed,
   MapPin,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Star,
@@ -39,7 +40,8 @@ const initialFilters: SearchFilters = {
   radiusKm: "25",
   maxHourlyRate: "",
   minScore: "",
-  onlyVerified: false
+  onlyVerified: false,
+  onlyDgtLibroTaller: false
 };
 
 const initialVehicle: VehicleDraft = {
@@ -287,6 +289,25 @@ export function WorkshopSearch() {
                     />
                   </div>
                 </div>
+
+                <div className="field">
+                  <label htmlFor="minScore">Rating minim</label>
+                  <div className="select-wrap">
+                    <Star />
+                    <select
+                      id="minScore"
+                      value={filters.minScore}
+                      onChange={(event) =>
+                        setFilters({ ...filters, minScore: event.target.value })
+                      }
+                    >
+                      <option value="">Qualsevol</option>
+                      <option value="7">D'excel·lència (7+)</option>
+                      <option value="8">Molt recomanat (8+)</option>
+                      <option value="9">Premium (9+)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div className="chips" aria-label="Filtres rapids">
@@ -303,13 +324,29 @@ export function WorkshopSearch() {
                   <BadgeCheck size={15} />
                   Verificats
                 </button>
-                <button className="chip chip-active" type="button">
-                  <Star size={15} />
-                  {filters.minScore ? `+${filters.minScore}` : "Sense rating"}
+                <button
+                  className={`chip ${filters.onlyDgtLibroTaller ? "chip-active" : ""}`}
+                  type="button"
+                  onClick={() =>
+                    setFilters({
+                      ...filters,
+                      onlyDgtLibroTaller: !filters.onlyDgtLibroTaller
+                    })
+                  }
+                >
+                  <ShieldCheck size={15} />
+                  DGT Libro Taller
                 </button>
-                <button className="chip" type="button">
-                  <Sparkles size={15} />
-                  Cita online
+                <button
+                  className="chip text-slate-400"
+                  type="button"
+                  onClick={() => {
+                    setFilters(initialFilters);
+                    // We don't trigger handleSearch here because setFilters is async
+                    // and we want the user to see the change before searching
+                  }}
+                >
+                  Netejar filtres
                 </button>
               </div>
 
